@@ -1,0 +1,38 @@
+version: '3.7'
+
+x-api-volumes: &api-volumes
+  - .:/app:cached
+  - ~/.ssh:/root/.ssh
+  - ~/.bash_history:/root/.bash_history
+
+x-api-environment: &api-environment
+  - DJANGO_ENV=dev
+  - DATABASE_NAME=lesswrong_dev
+  - DATABASE_USER=postgres
+  - DATABASE_HOST=db
+  - REDIS_URL=redis://redis:6379/
+  - DJANGO_SECRET_KEY=secret_key
+
+services:
+  web:
+    build: .
+    volumes: *api-volumes
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    environment: *api-environment
+    command: bash -c "pip install -r requirements.txt && python manage.py migrate && gunicorn app.wsgi:application --bind 0.0.0.0:8000"
+
+  db:
+    image: postgres:11.2-alpine
+    logging:
+      driver: none
+    ports:
+      - 5432:5432
+
+  redis:
+    image: redis
+    logging:
+      driver: none
